@@ -4,6 +4,8 @@
   "description": "vue2wx,wx2vue",
   "main": "index.js",
   "scripts": {
+		"dev":"marax dev",
+		"build":"marax build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -15,5 +17,12 @@
   "bugs": {
     "url": "https://github.com/xiaojue/vue-wx/issues"
   },
-  "homepage": "https://github.com/xiaojue/vue-wx#readme"
+  "homepage": "https://github.com/xiaojue/vue-wx#readme",
+  "dependencies": {
+    "acorn": "^5.5.0",
+    "vue-template-compiler": "^2.5.13"
+  },
+  "devDependencies": {
+    "webpack-marauder": "^1.7.1"
+  }
 }
