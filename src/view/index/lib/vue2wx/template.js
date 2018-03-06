@@ -56,7 +56,7 @@
  *
  * audio:audio
  *
- * image:image
+ * image:img
  *
  * video:video
  *
