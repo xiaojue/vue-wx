@@ -115,6 +115,8 @@
  * <wxs module='filters' src='/commons/filters.wxs'></wxs>
  * <div>{{ filters.filtername(remaining) }}</div>
  */
+import format from '../common/format';
+
 const compiler = require('vue-template-compiler');
 const fs = require('fs');
 
@@ -230,7 +232,7 @@ const template = {
         stack.length = pos;
       }
     }
-    return tpl;
+    return format(tpl);
   },
   convert: (filepath) => {
     let content = fs.readFileSync(filepath, 'utf8');

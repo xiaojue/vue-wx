@@ -20,6 +20,7 @@
   "homepage": "https://github.com/xiaojue/vue-wx#readme",
   "dependencies": {
     "acorn": "^5.5.0",
+    "js-beautify": "^1.7.5",
     "vue": "^2.5.13",
     "vue-template-compiler": "^2.5.13"
   },
