@@ -4,9 +4,9 @@
   "description": "vue2wx,wx2vue",
   "main": "index.js",
   "scripts": {
-		"dev":"marax dev",
-		"build":"marax build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "marax dev",
+    "build": "marax build",
+    "test": "mocha -r babel-register -r jsdom-global/register"
   },
   "repository": {
     "type": "git",
@@ -20,9 +20,16 @@
   "homepage": "https://github.com/xiaojue/vue-wx#readme",
   "dependencies": {
     "acorn": "^5.5.0",
+    "vue": "^2.5.13",
     "vue-template-compiler": "^2.5.13"
   },
   "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "babel-register": "^6.26.0",
+    "jsdom": "^11.6.2",
+    "jsdom-global": "^3.0.2",
+    "mocha": "^5.0.2",
     "webpack-marauder": "^1.7.1"
   }
 }
