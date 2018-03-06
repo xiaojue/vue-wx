@@ -116,19 +116,135 @@
  * <div>{{ filters.filtername(remaining) }}</div>
  */
 const compiler = require('vue-template-compiler');
+const fs = require('fs');
+
+function isNotClosedTag(tagName) {
+  return 'area,base,br,col,embed,frame,hr,img,input,isindex,keygen,' +
+    'link,meta,param,source,track,wbr'.split(',').indexOf(tagName) >= 0;
+}
+
+const tagConvertMap = [
+  ['view',
+    'aside,footer,header,h1,h2,h3,h4,h5,h6,nav,section,' +
+    'div,dd,dl,dt,ol,ul,li,p,main,' +
+    'i,' +
+    'table,thead,tbody,td,th,tr,' +
+    'fieldset,legend,' +
+    'a'.split(',')
+  ]
+];
+
+function convertTag(tagName) {
+  for (let i = 0; i < tagConvertMap.length; i++) {
+    let rule = tagConvertMap[i];
+    if (rule[1].indexOf(tagName) >= 0) {
+      return rule[0];
+    }
+  }
+  return null;
+}
 
 const template = {
-	/*解析 vue 文件*/
-  parseComponent: (file, options) => {
+  /*解析 vue 文件*/
+  sfc: (file, options) => {
     return compiler.parseComponent(file, options)
   },
-	/*解析 template 部分*/
+  /*解析 template 部分*/
   compile: (tpl, options) => {
     options = Object.assign({
       comments: true,
       preserveWhitespace: false,
       shouldDecodeNewlines: true
-    }, options);
+    }, options || {});
     return compiler.compile(tpl, options);
+  },
+  compileAST: (ast) => {
+    let tpl = '';
+    let stack = [];
+    process(ast, true);
+    /**
+     * help 便利ast
+     */
+    function process(item, isRoot) {
+      let children = item.children;
+      createTag(item, isRoot);
+      if (children && children.length) {
+        processChild(children);
+      }
+      if (item.type === 1) {
+        closeTag(item);
+      }
+    }
+
+    function processChild(children) {
+      children.map((item) => {
+        process(item);
+      });
+    }
+
+    function createTag(item, isRoot) {
+      switch (item.type) {
+        case 1:
+          {
+            var newTag = convertTag(item.tag);
+            if (newTag) item.tag = newTag;
+            tpl += `<${item.tag}`;
+            //TODO 处理attr
+            if (isNotClosedTag(item.tag)) {
+              tpl += ` />`;
+            } else {
+              tpl += `>`;
+              stack.push({
+                tag: item.tag
+              });
+            }
+            break;
+          }
+        case 2:
+          //表达式 {{expr}}
+          tpl += item.text;
+          break;
+        case 3:
+          //文本和注释
+          tpl += item.text;
+          break;
+      }
+    }
+
+    function closeTag(item) {
+      let tagName = item.tag;
+      var pos;
+      if (tagName) {
+        //从栈内找到闭合标签
+        for (pos = stack.length - 1; pos >= 0; pos--) {
+          if (stack[pos].tag === tagName) {
+            tpl += `</${tagName}>`;
+            break;
+          }
+        }
+      } else {
+        pos = 0;
+      }
+      if (pos >= 0) {
+        //说明有标签没有闭合,丢弃	
+        stack.length = pos;
+      }
+    }
+    return tpl;
+  },
+  convert: (filepath) => {
+    let content = fs.readFileSync(filepath, 'utf8');
+    let tpl = template.sfc(content).template.content;
+    let compiled = template.compile(tpl);
+    if (compiled.errors.length) {
+      throw new Error(compiled.errors[0]);
+    }
+    let ast = compiled.ast;
+    return template.compileAST(ast);
   }
 };
+
+
+export default {
+  convert: template.convert
+}

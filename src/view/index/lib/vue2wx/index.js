@@ -3,7 +3,7 @@ import script from './script';
 import style from './style';
 import template from './template';
 
-export {
+export default {
   npm,
   script,
   style,
