@@ -87,7 +87,7 @@
  *
  *  v-bind,简单类型 支持简写,不支持对象和数组的绑定
  *
- *  :class,:style 支持字符串，不支持对象，数组
+ *  :class,:style 不支持，小程序不支持绑定class，style，需要用表达式代替
  *  
  *  不支持的指令:
  *
@@ -109,38 +109,100 @@
  * 其他事件均不支持，v-on:click='' > bindtap=''
  * 事件修饰符支持stop 转 catch
  *
- * 【mustache】： filter会被转换成wxs函数形式
+ * 【mustache】：不支持 filter
  *
- * <div>{{ remaining | filtername }}</div> :
- * <wxs module='filters' src='/commons/filters.wxs'></wxs>
- * <div>{{ filters.filtername(remaining) }}</div>
  */
 import format from '../common/format';
 
 const compiler = require('vue-template-compiler');
 const fs = require('fs');
 
+const tagConvertMap = {
+  'view': 'aside,footer,header,h1,h2,h3,h4,h5,h6,nav,section,' +
+    'div,dd,dl,dt,ol,ul,li,p,main,' +
+    'i,' +
+    'table,thead,tbody,td,th,tr,' +
+    'fieldset,legend,' +
+    'a',
+  'block': 'template',
+  'scroll-view': 'scroll-view',
+  'swiper': 'swiper',
+  'movable-view': 'movable-view',
+  'cover-view': 'cover-view',
+  'icon': 'icon',
+  'text': 'span',
+  'rich-text': 'iframe-indoc',
+  'progress': 'progress',
+  'button': 'button',
+  'checkbox': 'checkbox',
+  'checkbox-group': 'checkbox-group',
+  'form': 'form',
+  'input': 'input',
+  'label': 'label',
+  'picker': 'picker',
+  'picker-view': 'picker-view',
+  'radio': 'radio',
+  'slider': 'slider',
+  'switch': 'switch',
+  'textarea': 'textarea',
+  'navigator': 'navigator',
+  'audio': 'audio',
+  'image': 'img',
+  'video': 'video',
+  'camera': 'camera',
+  'live-player': 'live-player',
+  'live-pusher': 'live-pusher',
+  'map': 'map',
+  'canvas': 'canvas',
+  'open-data': 'open-data',
+  'web-view': 'iframe-src'
+};
+
+function isCompTag(tagName) {
+  return !isHtmlTag(tagName) && !isWXTag(tagName);
+}
+
+function isWhiteTag(tagName) {
+  var whiteTags = [];
+  for (var i in tagConvertMap) {
+    var val = tagConvertMap[i];
+    whiteTags = whiteTags.concat(val.split(','));
+  }
+  return whiteTags.indexOf(tagName) >= 0;
+}
+
 function isNotClosedTag(tagName) {
   return 'area,base,br,col,embed,frame,hr,img,input,isindex,keygen,' +
     'link,meta,param,source,track,wbr'.split(',').indexOf(tagName) >= 0;
 }
 
-const tagConvertMap = [
-  ['view',
-    'aside,footer,header,h1,h2,h3,h4,h5,h6,nav,section,' +
-    'div,dd,dl,dt,ol,ul,li,p,main,' +
-    'i,' +
-    'table,thead,tbody,td,th,tr,' +
-    'fieldset,legend,' +
-    'a'.split(',')
-  ]
-];
+function isHtmlTag(tagName) {
+  return 'html,body,base,head,link,meta,style,title,' +
+    'address,article,aside,footer,header,h1,h2,h3,h4,h5,h6,hgroup,nav,section,' +
+    'div,dd,dl,dt,figcaption,figure,hr,img,li,main,ol,p,pre,ul,' +
+    'a,b,abbr,bdi,bdo,br,cite,code,data,dfn,em,i,kbd,mark,q,rp,rt,rtc,ruby,' +
+    's,samp,small,span,strong,sub,sup,time,u,var,wbr,area,audio,map,track,video,' +
+    'embed,object,param,source,canvas,script,noscript,del,ins,' +
+    'caption,col,colgroup,table,thead,tbody,td,th,tr,' +
+    'button,datalist,fieldset,form,input,label,legend,meter,optgroup,option,' +
+    'output,progress,select,textarea,' +
+    'details,dialog,menu,menuitem,summary,' +
+    'content,element,shadow,template' +
+    //svg tag
+    'svg,animate,circle,clippath,cursor,defs,desc,ellipse,filter,font-face,' +
+    'foreignObject,g,glyph,image,line,marker,mask,missing-glyph,path,pattern,' +
+    'polygon,polyline,rect,switch,symbol,text,textpath,tspan,use,view'.split(',').indexOf(tagName) >= 0;
+}
+
+function isWXTag(tagName) {
+  return Object.keys(tagConvertMap).indexOf(tagName) >= 0;
+}
 
 function convertTag(tagName) {
-  for (let i = 0; i < tagConvertMap.length; i++) {
-    let rule = tagConvertMap[i];
-    if (rule[1].indexOf(tagName) >= 0) {
-      return rule[0];
+  for (let ctag in tagConvertMap) {
+    let rule = tagConvertMap[ctag];
+    if (rule.split(',').indexOf(tagName) >= 0) {
+      return ctag;
     }
   }
   return null;
@@ -188,10 +250,16 @@ const template = {
       switch (item.type) {
         case 1:
           {
-            var newTag = convertTag(item.tag);
-            if (newTag) item.tag = newTag;
+            if (isWhiteTag(item.tag)) { //非自定义标签，可以标准转换的tag list
+              item.tag = convertTag(item.tag);
+            } else {
+              throw new Error(`${item.tag} can\'t convert,wx is not support!`);
+            }
             tpl += `<${item.tag}`;
             //TODO 处理attr
+            for (var key in item.attrsMap) {
+              tpl += ` ${key}="${item.attrsMap[key]}" `;
+            }
             if (isNotClosedTag(item.tag)) {
               tpl += ` />`;
             } else {
@@ -204,11 +272,20 @@ const template = {
           }
         case 2:
           //表达式 {{expr}}
-          tpl += item.text;
+          //不支持 filter格式
+          if (item.text.match(/\s\|\s/g)) {
+            throw new Error(`${item.text}，wx is not support filter`);
+          } else {
+            tpl += item.text;;
+          }
           break;
         case 3:
           //文本和注释
-          tpl += item.text;
+          if (item.isComment) {
+            tpl += `<!-- ${item.text} -->`;
+          } else {
+            tpl += item.text;
+          }
           break;
       }
     }

@@ -1,13 +1,16 @@
 <!-- comment -->
 <template>
   <div>
-		//注释
-		<p>{{message}}</p>
-    <aside> aside </aside>
-    <footer> footer </footer>
-    <header> header </header>
-    <h1> h1 </h1>
-    <h2> h2 </h2>
+		<!-- 注释 -->
+		<p class="pcls" id='myp'>{{message}}</p>
+		<aside v-bind:class="isActive"> aside </aside>
+    <footer v-if="ok1"> footer </footer>
+    <footer v-else-if="ok2"> footer </footer>
+    <footer v-else> footer </footer>
+    <header v-show="ok"> header </header>
+    <h1 :class="h1"> h1 </h1>
+		<h2 :style="mystyle"> h2 </h2>
+		<!--
     <h3> h3 </h3>
     <h4> h4 </h4>
     <h5> h5 </h5>
@@ -22,7 +25,10 @@
     <ol>
       <li>
         <ul>
-          <li> ol,li,ul,li </li>
+					<li v-for="item in items"> ol,li,ul,li {{item.message}} </li>
+					<li v-for="(item,index) in items"> ol,li,ul,li {{item.message}} {{index}} </li>
+					<li v-for="value in object"> {{value}} </li>
+					<li v-for="(value,key) in object"> {{key}} : {{value}} </li>
         </ul>
       </li>
     </ol>
@@ -45,16 +51,14 @@
       <legend>fieldset,legend</legend>
     </fieldset>
     <a href="https://sina.cn"> a </a>
-
     <template> template </template>
-
     <scroll-view> scroll-view </scroll-view>
     <swiper> swiper</swiper>
     <movable-view> movable-view </movable-view>
     <cover-view> cover-view </cover-view>
     <icon> icon </icon>
     <span> span </span>
-    <iframe src="about:blank;"></iframe>
+    <iframe-indoc src="about:blank;"></iframe-indoc>
     <progress> progress </progress>
     <button> button </button>
     <checkbox checked></checkbox>
@@ -81,6 +85,7 @@
     <map> map </map>
     <canvas> canvas </canvas>
     <open-data></open-data>
-    <iframe src="https://sina.cn"></iframe>
+    <iframe-src src="https://sina.cn"></iframe-src>
+		-->
   </div>
 </template>
