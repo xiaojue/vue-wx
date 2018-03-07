@@ -117,6 +117,27 @@ import format from '../common/format';
 const compiler = require('vue-template-compiler');
 const fs = require('fs');
 
+const eventConvertMap = {
+  'click': 'tap',
+  'touchstart': 'touchstart',
+  'touchmove': 'touchmove',
+  'touchcancel': 'touchcancel',
+  'touchend': 'touchend',
+  'submit': 'submit',
+  'reset': 'reset',
+  'input': 'input',
+  'focus': 'focus',
+  'blur': 'blur',
+  'scroll': 'scroll',
+  'error': 'error',
+  'play': 'play',
+  'pause': 'pause',
+  'ended': 'ended',
+  'timeupdate': 'timeupdate',
+  'animationstart': 'animationstart',
+  'animationend': 'animationend'
+}
+
 const tagConvertMap = {
   'view': 'aside,footer,header,h1,h2,h3,h4,h5,h6,nav,section,' +
     'div,dd,dl,dt,ol,ul,li,p,main,' +
@@ -156,6 +177,62 @@ const tagConvertMap = {
   'canvas': 'canvas',
   'open-data': 'open-data',
   'web-view': 'iframe-src'
+};
+
+const attrsConvertMap = {
+  'v-bind': function(key, val, obj) {
+    //处理bind所有情况
+    if (obj.modifier && obj.modifier) {
+      throw new Error(`v-bind ${obj.modifier} modifier is not support`);
+    }
+    return {
+      tpl: ` ${obj.bindKey}="{{${val}}}" `
+    }
+  },
+  'v-on': function(key, val, obj) {
+    //处理event,只支持阻止冒泡和捕获修饰符
+    if (obj.modifier && (obj.modifier != 'stop' || obj.modifier != 'capture')) {
+      throw new Error(`v-on ${obj.modifier} modifier is not support`);
+    }
+    let ckey = 'bind';
+    if (obj.modifier === 'stop') ckey = 'catch';
+    if (obj.modifier === 'capture') ckey = 'capture-bind';
+    let cbindKey = eventConvertMap[obj.bindKey];
+    if (!cbindKey) {
+      throw new Error(`v-on ${obj.bindKey} event is not support`);
+    }
+    return {
+      tpl: ` ${ckey}:${cbindKey}="${val}" `
+    };
+  },
+  'v-text': function(key, val) {
+    return {
+      insertContent: `{{${val}}}`
+    }
+  },
+  'v-html': function(key, val) {
+    throw new Error(`${key}='${val}' is not support,please use rich-text commponent`);
+  },
+  /*
+  'is':'is',
+  'v-show':,
+  'v-if':,
+  'v-else':,
+  'v-else-if':,
+  'v-for':,
+  'v-model':'',
+  'v-pre':'',
+  'v-cloak':'',
+  'v-once':'',
+  'v-animate':,
+  'v-opentype':,
+  'ref':,
+  'key':'',
+  'acm':''
+  'scope':'',
+  'slot':,
+  'slot-scope':,
+  */
 };
 
 function isCompTag(tagName) {
@@ -208,6 +285,31 @@ function convertTag(tagName) {
   return null;
 }
 
+//v-bind/on:key.modifier
+//:key.modifier
+//@key.modifier
+function getRealAttr(key) {
+  let ret = {};
+  var dot = key.indexOf('.');
+  dot = dot > -1 ? dot : key.length;
+  if (key.match(/^[:|@]/)) {
+    ret.type = key.charAt(0) === '@' ? 'v-on' : 'v-bind';
+    ret.bindKey = key.slice(1, dot);
+    ret.modifier = key.slice(dot + 1, key.length);
+    return ret;
+  }
+  if (key.match(/^v-(bind|on)/)) {
+    ret.type = key.charAt(2) === 'o' ? 'v-on' : 'v-bind';
+    var keyIndex = ret.type === 'v-on' ? 5 : 7;
+    ret.bindKey = key.slice(keyIndex, dot);
+    ret.modifier = key.slice(dot + 1, key.length);
+    return ret;
+  }
+  return {
+    type: key
+  };
+}
+
 const template = {
   /*解析 vue 文件*/
   sfc: (file, options) => {
@@ -255,15 +357,26 @@ const template = {
             } else {
               throw new Error(`${item.tag} can\'t convert,wx is not support!`);
             }
+            var insertContent = '';
             tpl += `<${item.tag}`;
-            //TODO 处理attr
+            //处理attr
             for (var key in item.attrsMap) {
-              tpl += ` ${key}="${item.attrsMap[key]}" `;
+              var attrObjs = getRealAttr(key);
+              var cAttr = attrsConvertMap[attrObjs.type];
+              if (cAttr) {
+                var resObj = cAttr(key, item.attrsMap[key], attrObjs);
+                insertContent = resObj.insertContent || '';
+                tpl += resObj.tpl || '';
+              } else {
+                tpl += ` ${key}="${item.attrsMap[key]}" `;
+              }
             }
             if (isNotClosedTag(item.tag)) {
               tpl += ` />`;
             } else {
               tpl += `>`;
+              //处理v-text,v-html,把插入标签的内容注入
+              tpl += insertContent;
               stack.push({
                 tag: item.tag
               });
@@ -276,7 +389,7 @@ const template = {
           if (item.text.match(/\s\|\s/g)) {
             throw new Error(`${item.text}，wx is not support filter`);
           } else {
-            tpl += item.text;;
+            tpl += item.text;
           }
           break;
         case 3:

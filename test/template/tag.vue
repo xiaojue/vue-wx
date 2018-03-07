@@ -2,15 +2,24 @@
 <template>
   <div>
 		<!-- 注释 -->
+		<!--
 		<p class="pcls" id='myp'>{{message}}</p>
+		-->
+		<p v-text="message"></p>
+		<p v-bind:id="myid"></p>
 		<aside v-bind:class="isActive"> aside </aside>
+		<p :id="shortId"></p>
+		<p v-on:click="clickFunc1"></p>
+		<p @click="clickFunc2"></p>
+		<!--
+		<p v-html="message"></p>
+		<p class="pcls" id='myp'>{{message}}</p>
     <footer v-if="ok1"> footer </footer>
     <footer v-else-if="ok2"> footer </footer>
     <footer v-else> footer </footer>
     <header v-show="ok"> header </header>
     <h1 :class="h1"> h1 </h1>
 		<h2 :style="mystyle"> h2 </h2>
-		<!--
     <h3> h3 </h3>
     <h4> h4 </h4>
     <h5> h5 </h5>
