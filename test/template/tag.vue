@@ -11,15 +11,20 @@
 		<p :id="shortId"></p>
 		<p v-on:click="clickFunc1"></p>
 		<p @click="clickFunc2"></p>
-		<!--
-		<p v-html="message"></p>
-		<p class="pcls" id='myp'>{{message}}</p>
+    <h1 :class="h1"> h1 </h1>
+    <header v-show="ok"> header </header>
+		<h2 :style="mystyle"> h2 </h2>
     <footer v-if="ok1"> footer </footer>
     <footer v-else-if="ok2"> footer </footer>
     <footer v-else> footer </footer>
-    <header v-show="ok"> header </header>
-    <h1 :class="h1"> h1 </h1>
-		<h2 :style="mystyle"> h2 </h2>
+		
+		<template v-if="ok">
+			<h1 v-if="ok2">ok</h1>	
+		</template>
+		<template v-else> nook</template>
+		<!--
+		<p v-html="message"></p>
+		<p class="pcls" id='myp'>{{message}}</p>
     <h3> h3 </h3>
     <h4> h4 </h4>
     <h5> h5 </h5>

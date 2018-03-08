@@ -77,7 +77,7 @@
  * 【不支持】:vue中的自定义component的转换，以及slot等特性
  * 
  * 【指令】:
- *  is/:is > is
+ *  is/:is > is -> 在bind处已经处理
  *  wx:for > v-for
  *  wx:if > v-if
  *  wx:elif > v-else-if
@@ -213,12 +213,27 @@ const attrsConvertMap = {
   'v-html': function(key, val) {
     throw new Error(`${key}='${val}' is not support,please use rich-text commponent`);
   },
+  'v-if': function(key, val) {
+    return {
+      tpl: ` wx:if="{{${val}}}" `
+    }
+  },
+  'v-show': function(key, val) {
+    return {
+      tpl: ` wx:if="{{${val}}}" `
+    }
+  },
+  'v-else': function(key, val) {
+    return {
+      tpl: ` wx:else `
+    }
+  },
+  'v-else-if': function(key, val) {
+    return {
+      tpl: ` wx:elif="{{${val}}}" `
+    }
+  },
   /*
-  'is':'is',
-  'v-show':,
-  'v-if':,
-  'v-else':,
-  'v-else-if':,
   'v-for':,
   'v-model':'',
   'v-pre':'',
@@ -329,7 +344,7 @@ const template = {
     let stack = [];
     process(ast, true);
     /**
-     * help 便利ast
+     * help 遍历ast
      */
     function process(item, isRoot) {
       let children = item.children;
@@ -420,6 +435,13 @@ const template = {
       if (pos >= 0) {
         //说明有标签没有闭合,丢弃	
         stack.length = pos;
+      }
+      //处理else-if和else
+      if(item.ifConditions && item.ifConditions.length > 0){
+        for (let i=1; i<item.ifConditions.length; i++){
+          let block = item.ifConditions[i].block
+          if(block) process(block);
+        }
       }
     }
     return format(tpl);
